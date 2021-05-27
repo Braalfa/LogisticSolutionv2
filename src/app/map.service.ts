@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import * as mapboxgl from "mapbox-gl";
 import {LngLat, Marker} from "mapbox-gl";
 import {mark} from "@angular/compiler-cli/src/ngtsc/perf/src/clock";
+import {Cluster} from "./Models/Cluster";
+import {Destination} from "./Models/Destination";
 
 @Injectable({
   providedIn: 'root'
@@ -60,44 +62,112 @@ export class MapService {
     this.markers.splice(index,1)
   }
 
-  calcular() {
-    var a = this.markers[0].getLngLat().lng;
-    var b = this.markers[0].getLngLat().lat;
-    var c = this.markers[1].getLngLat().lng;
-    var d = this.markers[1].getLngLat().lat;
+  calcularDistancia(d1: Destination, d2:Destination) {
+    console.log('https://api.mapbox.com/directions/v5/mapbox/driving/'+d1.long+','+d1.lat+';'+d2.long+','+d2.lat
+      +'?annotations=distance&geometries=geojson&access_token=pk.eyJ1IjoiYWxmYWJyeWFuMTIiLCJhIjoiY2tvNnJ4eXVlMTZxaDJ3bWw0anFhbWQ1aSJ9.CONtvR3H-AQijuy2K6rMoA')
 
-    fetch('https://api.mapbox.com/directions/v5/mapbox/driving/'+a+','+b+';'+c+','+d+'?annotations=distance&geometries=geojson&access_token=pk.eyJ1IjoiYWxmYWJyeWFuMTIiLCJhIjoiY2tvNnJ4eXVlMTZxaDJ3bWw0anFhbWQ1aSJ9.CONtvR3H-AQijuy2K6rMoA')
-      .then(res => {
-        res.json().then((val)=> {
-            this.map.addSource('route', {
-              'type': 'geojson',
-              'data': {
-                'type': 'Feature',
-                'properties': {},
-                'geometry': {
-                  'type': 'LineString',
-                  'coordinates': val.routes[0].geometry.coordinates
-                }
-              }
-            });
-            this.map.addLayer({
-              'id': 'route',
-              'type': 'line',
-              'source': 'route',
-              'layout': {
-                'line-join': 'round',
-                'line-cap': 'round'
-              },
-              'paint': {
-                'line-color': '#888',
-                'line-width': 8
-              }
-            });
-          }
-        );
+    return fetch('https://api.mapbox.com/directions/v5/mapbox/driving/'+d1.long+','+d1.lat+';'+d2.long+','+d2.lat
+      +'?annotations=distance&geometries=geojson&access_token=pk.eyJ1IjoiYWxmYWJyeWFuMTIiLCJhIjoiY2tvNnJ4eXVlMTZxaDJ3bWw0anFhbWQ1aSJ9.CONtvR3H-AQijuy2K6rMoA')
+  }
 
+  make2dArray(size:number) {
+    var arr = [];
+    for(let i = 0; i < size; i++) {
+      arr.push(new Array(size));
+    }
+    return arr;
+  }
 
-      });
+  async calcularDistanciasAux(k:number, j:number, d1:Destination, d2:Destination, distances:any, weights:any, dic:any){
+    this.calcularDistancia(d1, d2).then(res => {
+      res.json().then((val) => {
+          distances[j][k] = val.routes[0].distance;
+          distances[k][j] = val.routes[0].distance;
+          weights[j][k] = val.routes[0].distance / d2.volume;
+          weights[k][j] = val.routes[0].distance / d1.volume
+
+          dic.push({
+            origin: d1.id,
+            destination: d2.id,
+            dist: val.routes[0].distance,
+            weight: val.routes[0].distance / d2.volume
+          })
+          dic.push({
+            origin: d2.id,
+            destination: d1.id,
+            dist: val.routes[0].distance,
+            weight: val.routes[0].distance / d1.volume
+          })
+        }
+      );
+    });
 
   }
+
+  async calcularDistancias(clusters: Cluster[]) {
+    const allDistances = [];
+    const allWeigths = [];
+    const allDics = [];
+
+    for(let i = 0 ; i<clusters.length; i++){
+
+      const cluster = clusters[i];
+      const destinations = cluster.destinations;
+      const distances = this.make2dArray(destinations.length)
+      const weights = this.make2dArray(destinations.length)
+      const dic: { origin: string | undefined; destination: string | undefined; dist: any; weight: number; }[] = []
+
+      allDistances.push(distances)
+      allWeigths.push(weights)
+      allDics.push(dic)
+
+      for(let j = 0; j<destinations.length; j++){
+        const d1 = destinations[j];
+        for(let k = j+1; k<destinations.length; k++) {
+          if (k != j) {
+            const d2 = destinations[k];
+            await this.calcularDistanciasAux(k, j, d1, d2, distances, weights, dic)
+          } else {
+            distances[j][k] = 0;
+            weights[j][k] = 0;
+          }
+        }
+      }
+    }
+
+    
+
+    return {allDistances, allWeigths, allDics}
+  }
 }
+
+// then(res => {
+//   res.json().then((val)=> {
+//       this.map.addSource('route', {
+//         'type': 'geojson',
+//         'data': {
+//           'type': 'Feature',
+//           'properties': {},
+//           'geometry': {
+//             'type': 'LineString',
+//             'coordinates': val.routes[0].geometry.coordinates
+//           }
+//         }
+//       });
+//       this.map.addLayer({
+//         'id': 'route',
+//         'type': 'line',
+//         'source': 'route',
+//         'layout': {
+//           'line-join': 'round',
+//           'line-cap': 'round'
+//         },
+//         'paint': {
+//           'line-color': '#888',
+//           'line-width': 8
+//         }
+//       });
+//     }
+//   );
+//
+// });

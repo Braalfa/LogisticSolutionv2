@@ -12,6 +12,7 @@ export class ClusterComponent implements AfterViewInit {
 
   clusters: Cluster[] = [{destinations: [], color:'#3FB1CE'}];
   blockChecking = false;
+  result: any;
   constructor(private mapService: MapService) { }
 
   ngAfterViewInit(): void {
@@ -27,6 +28,7 @@ export class ClusterComponent implements AfterViewInit {
     if(destination.marker){
       this.mapService.setTextToMarker(destination.marker, destination.id, this.clusters[numCluster].color)
     }
+    destination.nameTouched = true
   }
 
   updateMarkerPos(numCluster: number, numDestination: number){
@@ -71,7 +73,7 @@ export class ClusterComponent implements AfterViewInit {
   onDeleteDestination(numCluster: number, numDestination: number):void{
     this.removeMarker(numCluster, numDestination)
     this.clusters[numCluster].destinations.splice(numDestination,1)
-    this.clusters[numCluster].destinations.forEach((d,i)=>d.id=(i+1).toString())
+    this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i+1).toString()}})
   }
 
   removeMarker(numCluster: number, numDestination: number){
@@ -79,5 +81,9 @@ export class ClusterComponent implements AfterViewInit {
     if(destination.marker){
       this.mapService.deleteMarker(destination.marker)
     }
+  }
+
+  analize():void{
+     this.mapService.calcularDistancias(this.clusters).then(result=>console.log(result))
   }
 }

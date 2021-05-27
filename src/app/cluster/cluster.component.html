@@ -1,3 +1,4 @@
+<form #form>
 <div class="border rounded container-fluid m-0 p-0">
   <p class="text-secondary text-center align-self-center" style="font-size: x-large; width: 95%; margin: auto">Clusters
     <button type="button"  (click)="onAddCluster()"  class="btn btn-success align-self-center" style="padding:  3px 9px 3px 9px;"><i class="bi bi-plus-lg"></i>
@@ -45,19 +46,25 @@
                   <div class="row">
                     <div class="col-3 pl-1 pr-1 ">
                       <input required type="text" id="{{'Id'+i}}" name="{{'Id'+i}}" class="form-control"
-                             placeholder="{{'Nombre'}}" [(ngModel)]="destination.id" #id="ngModel" (ngModelChange)="updateMarkerTag(j,i)">
+                             placeholder="{{'Nombre'}}" [(ngModel)]="destination.id" #id="ngModel" (ngModelChange)="updateMarkerTag(j,i)"
+                             [class.is-invalid]="id.invalid && (id.dirty || id.touched)">
                     </div>
                     <div class="col-3 pl-1 pr-1">
                       <input required pattern="[0-9]*" type="text" id="{{'Volume'+i}}" name="{{'Volume'+i}}" class="form-control"
-                             placeholder="{{'Volumen'}}"  [(ngModel)]="destination.volume" #volume="ngModel">
+                             placeholder="{{'Volumen'}}" min="0"  [(ngModel)]="destination.volume" #volume="ngModel"
+                             [class.is-invalid]="volume.invalid && (volume.dirty || volume.touched)">
                     </div>
                     <div class="col-3 pl-1 pr-1 ">
-                      <input required pattern="[0-9]*" type="text" id="{{'lat'+i}}" name="{{'lat'+i}}" class="form-control"
-                             placeholder="{{'Lat'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.lat" #lat="ngModel" >
+                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lat'+i}}" name="{{'lat'+i}}" class="form-control"
+                             placeholder="{{'Lat'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.lat" #lat="ngModel"
+                             min="-90" max="90" step="any"
+                             [class.is-invalid]="(lat.invalid && (lat.dirty || lat.touched))">
                     </div>
                     <div class="col-3 pl-1 pr-1">
-                      <input required pattern="[0-9]*" type="text" id="{{'lon'+i}}" name="{{'lon'+i}}" class="form-control"
-                             placeholder="{{'Long'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.long" #lon="ngModel">
+                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lon'+i}}" name="{{'lon'+i}}" class="form-control"
+                             placeholder="{{'Long'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.long" #lon="ngModel"
+                             min="-180" max="180" step="any"
+                             [class.is-invalid]="(lon.invalid && (lon.dirty || lon.touched))">
                     </div>
                   </div>
                 </div>
@@ -79,3 +86,8 @@
     </div>
   </div>
 </div>
+  <div class="text-center">
+    <button [disabled]="!form.checkValidity()" (click)="analize()" style="font-size: x-large; margin-top: 6vh" class="btn btn-primary">Calcular Logística   <i class="bi bi-truck"></i>
+    </button>
+  </div>
+</form>
