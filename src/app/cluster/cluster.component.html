@@ -1,0 +1,12 @@
+<div class="border rounded container-fluid m-0 p-0">
+  <p class="text-secondary text-center" style="font-size: x-large; width: 95%; margin: auto">Clusters</p>
+  <div style="overflow-y: auto; overflow-x: hidden; height: 90vh" class="mt-2 border-top">
+    <div *ngFor="let cluster of clusters ; index as i">
+      <div class="row mt-2">
+        <div class="col-12 pl-4 pr-4">
+          <app-destination [clusterNum]="i"></app-destination>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
