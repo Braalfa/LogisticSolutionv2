@@ -90,7 +90,6 @@ export class MapService {
             distances[k][j] = val.routes[0].distance;
             weights[j][k] = val.routes[0].distance / d2.volume;
             weights[k][j] = val.routes[0].distance / d1.volume
-
             dic.push({
               origin: d1.id,
               destination: d2.id,
@@ -147,7 +146,7 @@ export class MapService {
 
         let next = remaining[i];
         let dic = dics.find((d:any) => d.origin===current && d.destination === next)
-
+        debugger
         if(dic){
           tempRoute.weight+= dic.weight;
         }
@@ -200,6 +199,7 @@ export class MapService {
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
     var allDistributionCenters: { lat: number; long: number; }[] = [];
     this.calcularDistancias(clusters).then(result=>{
+      console.log(result.allDics)
       let minRoutes: Route[] = []
       // Calcular las rutas
       for(let i = 0; i< result.allDics.length; i++){
@@ -210,7 +210,6 @@ export class MapService {
       for(let i = 0; i<minRoutes.length; i++){
         let dics = result.allDics[i]
         let route = minRoutes[i]
-        let distances = []
         let midpoints = []
         let distributionCenter = {
           lat: 0,
@@ -259,6 +258,41 @@ export class MapService {
     return {allMidPoints, allDistributionCenters}
   }
 
+  analizeSimple(clusters: Cluster[]):any {
+    var allDistributionCenters: { lat: number; long: number; }[] = [];
+    // Calcular los centros cluster por cluster
+    for(let i = 0; i<clusters.length; i++){
+      let distributionCenter = {
+        lat: 0,
+        long: 0
+      }
+      // Calculo intracluster
+      for(let j = 0; j<clusters[i].destinations.length; j++) {
+        let destination = clusters[i].destinations[j];
+        if (destination.lat && destination.long) {
+          distributionCenter.lat += destination.lat;
+          distributionCenter.long += destination.long;
+        }
+      }
+      distributionCenter.lat = distributionCenter.lat/(clusters[i].destinations.length)
+      distributionCenter.long = distributionCenter.long/(clusters[i].destinations.length)
+      allDistributionCenters.push(distributionCenter);
+
+      let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+      marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
+      marker.setDraggable(false)
+      let destination = new Destination();
+      destination.id = "Centro "+(i+1);
+      destination.marker = marker;
+      destination.nameTouched = true;
+      destination.long = distributionCenter.long;
+      destination.lat = distributionCenter.lat;
+      destination.center = true;
+      destination.volume = 0;
+      clusters[i].destinations.push(destination)
+    }
+    return allDistributionCenters;
+  }
 }
 
 

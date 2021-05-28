@@ -95,6 +95,14 @@ export class ClusterComponent implements AfterViewInit {
     this.mapService.analize(this.clusters)
   }
 
+  analizeSimple():void{
+    for(let i = 0; i<this.clusters.length; i++){
+      this.removeCenters(i);
+    }
+    this.mapService.analizeSimple(this.clusters)
+  }
+
+
   removeCenters(numCluster: number){
     let destinations = this.clusters[numCluster].destinations;
     for(let i =0; i<destinations.length; i++){

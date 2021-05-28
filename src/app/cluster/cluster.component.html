@@ -86,8 +86,24 @@
     </div>
   </div>
 </div>
-  <div class="text-center">
-    <button [disabled]="!form.checkValidity()" (click)="analize()" style="font-size: x-large; margin-top: 6vh" class="btn btn-primary">Calcular Logística   <i class="bi bi-truck"></i>
-    </button>
+  <div class="row" style="margin-top: 3vh">
+    <div class="col-2 pl-1 pr-1">
+    </div>
+
+    <div class="col-4 pl-1 pr-2">
+      <div class="text-center">
+        <button [disabled]="!form.checkValidity()" (click)="analize()" style="font-size: large;" class="btn btn-primary">Calcular Logística Nueva <i class="bi bi-truck"></i>
+        </button>
+      </div>
+    </div>
+    <div class="col-4 pl-2 pr-1">
+      <div class="text-center">
+        <button [disabled]="!form.checkValidity()" (click)="analizeSimple()" style="font-size: large;" class="btn btn-secondary">Calcular Logística Antigua <i class="bi bi-truck"></i>
+        </button>
+      </div>
+
+    </div>
+    <div class="col-2 pl-1 pr-1">
+    </div>
   </div>
 </form>
