@@ -4,7 +4,7 @@ import { AppComponent } from './app.component';
 import { MapComponent } from './map/map.component';
 import { ClusterComponent } from './cluster/cluster.component';
 import { DestinationComponent } from './destination/destination.component';
-import {CommonModule} from "@angular/common"
+import { CommonModule} from "@angular/common"
 import { FormsModule } from '@angular/forms';
 @NgModule({
   imports: [

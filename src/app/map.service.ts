@@ -6,7 +6,9 @@ import {Cluster} from "./Models/Cluster";
 import {Destination} from "./Models/Destination";
 import {Dic} from "./Models/Dic";
 import {Route} from "./Models/Route";
-
+import {min} from "rxjs/operators";
+import length from '@turf/length';
+import * as turf from '@turf/helpers';
 @Injectable({
   providedIn: 'root'
 })
@@ -93,13 +95,25 @@ export class MapService {
               origin: d1.id,
               destination: d2.id,
               dist: val.routes[0].distance,
-              weight: val.routes[0].distance / d2.volume
+              weight: val.routes[0].distance / d2.volume,
+              originVolume: d1.volume,
+              destinationVolume: d2.volume,
+              originLat: d1.lat,
+              originLong: d1.long,
+              destinationLat: d2.lat,
+              destinationLong: d2.long
             })
             dic.push({
               origin: d2.id,
               destination: d1.id,
               dist: val.routes[0].distance,
-              weight: val.routes[0].distance / d1.volume
+              weight: val.routes[0].distance / d1.volume,
+              originVolume: d2.volume,
+              destinationVolume: d1.volume,
+              originLat: d2.lat,
+              originLong: d2.long,
+              destinationLat: d1.lat,
+              destinationLong: d1.long
             })
           resolve("ok")
         });
@@ -178,9 +192,75 @@ export class MapService {
         }
       }
     }
+
     return {allDistances, allWeigths, allDics}
   }
+
+  analize(clusters: Cluster[]):{ allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number }[][]; allDistributionCenters: { lat: number; long: number }[] }{
+    var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
+    var allDistributionCenters: { lat: number; long: number; }[] = [];
+    this.calcularDistancias(clusters).then(result=>{
+      let minRoutes: Route[] = []
+      // Calcular las rutas
+      for(let i = 0; i< result.allDics.length; i++){
+        minRoutes.push(this.minRoute(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
+      }
+
+      // Calcular los centros cluster por cluster
+      for(let i = 0; i<minRoutes.length; i++){
+        let dics = result.allDics[i]
+        let route = minRoutes[i]
+        let distances = []
+        let midpoints = []
+        let distributionCenter = {
+          lat: 0,
+          long: 0
+        }
+        // Calculo intracluster
+        for(let j = 0; j<route.path.length-1; j++) {
+          let dic = dics.find((d: any) => d.origin === route.path[j] && d.destination === route.path[j + 1])
+          if (dic) {
+            midpoints.push({
+              origin: dic.origin,
+              destination: dic.destination,
+              lat: (dic.originLat + dic.destinationLat) / 2,
+              long: (dic.originLong + dic.destinationLong) / 2,
+              weight: (dic.originVolume + dic.destinationVolume) / 2,
+              distributionDistance: 0
+            })
+            distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
+            distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
+          }
+        }
+        distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
+        distributionCenter.long = distributionCenter.long/(route.path.length-1)
+        midpoints.forEach(m=>{
+          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+            [m.long, m.lat]]);
+          m.distributionDistance = length(line, {units: 'kilometers'});
+        })
+        allMidPoints.push(midpoints);
+        allDistributionCenters.push(distributionCenter);
+
+        let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+        marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
+        marker.setDraggable(false)
+        let destination = new Destination();
+        destination.id = "Centro "+(i+1);
+        destination.marker = marker;
+        destination.nameTouched = true;
+        destination.long = distributionCenter.long;
+        destination.lat = distributionCenter.lat;
+        destination.center = true;
+        destination.volume = 0;
+        clusters[i].destinations.push(destination)
+      }
+    })
+    return {allMidPoints, allDistributionCenters}
+  }
+
 }
+
 
 // then(res => {
 //   res.json().then((val)=> {

@@ -7,5 +7,6 @@ export class Destination {
   public lat: number|undefined;
   public long: number|undefined;
   public nameTouched: boolean = false;
+  public center: boolean = false;
   constructor() {}
 }

@@ -40,36 +40,36 @@
                 </div>
               </div>
             </div>
-            <div class="m-2" style="margin-top: 0" *ngFor="let destination of cluster.destinations ; index as i">
+            <div class="m-2" style="margin-top: 0" *ngFor="let destination of cluster.destinations ; index as i; trackBy: trackByFn">
               <div class="row">
                 <div class="col-11">
                   <div class="row">
                     <div class="col-3 pl-1 pr-1 ">
-                      <input required type="text" id="{{'Id'+i}}" name="{{'Id'+i}}" class="form-control"
+                      <input required type="text" id="{{'Id'+i+j}}" name="{{'Id'+i+j}}" class="form-control"
                              placeholder="{{'Nombre'}}" [(ngModel)]="destination.id" #id="ngModel" (ngModelChange)="updateMarkerTag(j,i)"
-                             [class.is-invalid]="id.invalid && (id.dirty || id.touched)">
+                             [class.is-invalid]="id.invalid && (id.dirty || id.touched)" [disabled]="destination.center">
                     </div>
                     <div class="col-3 pl-1 pr-1">
-                      <input required pattern="[0-9]*" type="text" id="{{'Volume'+i}}" name="{{'Volume'+i}}" class="form-control"
-                             placeholder="{{'Volumen'}}" min="0"  [(ngModel)]="destination.volume" #volume="ngModel"
+                      <input required pattern="[0-9]*" type="text" id="{{'Volume'+i+j}}" name="{{'Volume'+i+j}}" class="form-control"
+                             placeholder="{{'Volumen'}}" min="0" (change)="removeCenters(j)"  [(ngModel)]="destination.volume" #volume="ngModel"  [disabled]="destination.center"
                              [class.is-invalid]="volume.invalid && (volume.dirty || volume.touched)">
                     </div>
                     <div class="col-3 pl-1 pr-1 ">
-                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lat'+i}}" name="{{'lat'+i}}" class="form-control"
+                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lat'+i+j}}" name="{{'lat'+i+j}}" class="form-control"
                              placeholder="{{'Lat'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.lat" #lat="ngModel"
-                             min="-90" max="90" step="any"
+                             min="-90" max="90" step="any" [disabled]="destination.center"
                              [class.is-invalid]="(lat.invalid && (lat.dirty || lat.touched))">
                     </div>
                     <div class="col-3 pl-1 pr-1">
-                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lon'+i}}" name="{{'lon'+i}}" class="form-control"
+                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lon'+i+j}}" name="{{'lon'+i+j}}" class="form-control"
                              placeholder="{{'Long'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.long" #lon="ngModel"
-                             min="-180" max="180" step="any"
+                             min="-180" max="180" step="any" [disabled]="destination.center"
                              [class.is-invalid]="(lon.invalid && (lon.dirty || lon.touched))">
                     </div>
                   </div>
                 </div>
                 <div class="col-1 pl-2 text-center align-self-center" *ngIf="cluster.destinations.length>1">
-                  <button type="button" (click)="onDeleteDestination(j,i)" class="btn btn-danger" style="padding:  3px 12px 3px 12px;">-</button>
+                  <button type="button" (click)="onDeleteDestination(j,i)" *ngIf="!destination.center" class="btn btn-danger" style="padding:  3px 12px 3px 12px;">-</button>
                 </div>
               </div>
             </div>

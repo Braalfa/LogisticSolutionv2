@@ -33,6 +33,7 @@ export class ClusterComponent implements AfterViewInit {
 
   updateMarkerPos(numCluster: number, numDestination: number){
     this.blockChecking = true;
+    this.removeCenters(numCluster);
     let destination = this.clusters[numCluster].destinations[numDestination]
     if(destination.marker && destination.lat && destination.long){
       this.mapService.updateMarkerPos(destination.marker, destination.long, destination.lat)
@@ -42,7 +43,7 @@ export class ClusterComponent implements AfterViewInit {
 
 
   onAddDestination(numCluster: number): void{
-    // @ts-ignore
+    this.removeCenters(numCluster);
     let destinations = this.clusters[numCluster].destinations;
     destinations.push(new Destination())
     let destination = destinations.slice(-1)[0]
@@ -51,16 +52,18 @@ export class ClusterComponent implements AfterViewInit {
     destination.long = destination.marker.getLngLat().lng
     destination.lat = destination.marker.getLngLat().lat
     destination.marker.on('drag', () => {
-      // @ts-ignore
-      destination.long = destination.marker.getLngLat().lng;
-      // @ts-ignore
-      destination.lat = destination.marker.getLngLat().lat;
+      if(destination.marker) {
+        destination.long = destination.marker.getLngLat().lng;
+        destination.lat = destination.marker.getLngLat().lat;
+        this.removeCenters(numCluster);
+      }
     });
 
   }
 
 
   onAddCluster(): void{
+    console.log("adding cluster")
     this.clusters.push(new Cluster())
     this.onAddDestination(this.clusters.length-1)
   }
@@ -74,7 +77,9 @@ export class ClusterComponent implements AfterViewInit {
     this.removeMarker(numCluster, numDestination)
     this.clusters[numCluster].destinations.splice(numDestination,1)
     this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i).toString()}})
+    this.removeCenters(numCluster);
   }
+
 
   removeMarker(numCluster: number, numDestination: number){
     let destination = this.clusters[numCluster].destinations[numDestination]
@@ -84,9 +89,25 @@ export class ClusterComponent implements AfterViewInit {
   }
 
   analize():void{
-     this.mapService.calcularDistancias(this.clusters).then(result=>{
-       console.log(result)
-       console.log(this.mapService.minRoute(result.allDics[0], this.clusters[0].destinations.map(d=>d.id) as string[]))
-     })
+    for(let i = 0; i<this.clusters.length; i++){
+      this.removeCenters(i);
+    }
+    this.mapService.analize(this.clusters)
   }
+
+  removeCenters(numCluster: number){
+    let destinations = this.clusters[numCluster].destinations;
+    for(let i =0; i<destinations.length; i++){
+      if(destinations[i].center){
+        this.removeMarker(numCluster, i)
+        this.clusters[numCluster].destinations.splice(i,1)
+        this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i).toString()}})
+      }
+    }
+  }
+
+  trackByFn(i: number) {
+    return i
+  }
+
 }
