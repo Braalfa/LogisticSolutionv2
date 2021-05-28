@@ -202,7 +202,7 @@ export class MapService {
   interClusterDistances(clusters: Cluster[], allDistributionCenters: { lat: number; long: number; }[]){
     let distances = []
     for(let i =0; i<clusters.length; i++){
-      for(let j =i; i<clusters.length; i++){
+      for(let j =i; j<clusters.length; j++){
         if(j!=i){
           let line = turf.lineString([[allDistributionCenters[i].long, allDistributionCenters[i].lat],
             [allDistributionCenters[j].long, allDistributionCenters[j].lat]]);
@@ -307,7 +307,7 @@ export class MapService {
       ws_data.push(['Clusters', 'Distancia']);
       let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
       interClusterDistances.forEach(d=>{
-        ws_data.push([d.origin+'-'+d.destination, d.distance]);
+        ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
       })
 
       let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
@@ -413,7 +413,7 @@ export class MapService {
     ws_data.push(['Clusters', 'Distancia']);
     let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
     interClusterDistances.forEach(d=>{
-      ws_data.push([d.origin+'-'+d.destination, d.distance]);
+      ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
     })
 
     let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
