@@ -332,7 +332,7 @@ export class MapService {
         return buf;
       }
 
-      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisantiguo.xlsx');
+      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisnuevo.xlsx');
 
     })
 
@@ -435,7 +435,7 @@ export class MapService {
       return buf;
     }
 
-    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisnuevo.xlsx');
+    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisviejo.xlsx');
 
     return allDistributionCenters;
   }
