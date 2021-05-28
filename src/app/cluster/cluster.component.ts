@@ -84,6 +84,9 @@ export class ClusterComponent implements AfterViewInit {
   }
 
   analize():void{
-     this.mapService.calcularDistancias(this.clusters).then(result=>console.log(result))
+     this.mapService.calcularDistancias(this.clusters).then(result=>{
+       console.log(result)
+       console.log(this.mapService.minRoute(result.allDics[0], this.clusters[0].destinations.map(d=>d.id) as string[]))
+     })
   }
 }

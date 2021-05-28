@@ -4,6 +4,8 @@ import {LngLat, Marker} from "mapbox-gl";
 import {mark} from "@angular/compiler-cli/src/ngtsc/perf/src/clock";
 import {Cluster} from "./Models/Cluster";
 import {Destination} from "./Models/Destination";
+import {Dic} from "./Models/Dic";
+import {Route} from "./Models/Route";
 
 @Injectable({
   providedIn: 'root'
@@ -79,35 +81,76 @@ export class MapService {
   }
 
   async calcularDistanciasAux(k:number, j:number, d1:Destination, d2:Destination, distances:any, weights:any, dic:any){
-    this.calcularDistancia(d1, d2).then(res => {
-      res.json().then((val) => {
-          distances[j][k] = val.routes[0].distance;
-          distances[k][j] = val.routes[0].distance;
-          weights[j][k] = val.routes[0].distance / d2.volume;
-          weights[k][j] = val.routes[0].distance / d1.volume
+    return new Promise(resolve => {
+      this.calcularDistancia(d1, d2).then(res => {
+        res.json().then((val) => {
+            distances[j][k] = val.routes[0].distance;
+            distances[k][j] = val.routes[0].distance;
+            weights[j][k] = val.routes[0].distance / d2.volume;
+            weights[k][j] = val.routes[0].distance / d1.volume
 
-          dic.push({
-            origin: d1.id,
-            destination: d2.id,
-            dist: val.routes[0].distance,
-            weight: val.routes[0].distance / d2.volume
-          })
-          dic.push({
-            origin: d2.id,
-            destination: d1.id,
-            dist: val.routes[0].distance,
-            weight: val.routes[0].distance / d1.volume
-          })
+            dic.push({
+              origin: d1.id,
+              destination: d2.id,
+              dist: val.routes[0].distance,
+              weight: val.routes[0].distance / d2.volume
+            })
+            dic.push({
+              origin: d2.id,
+              destination: d1.id,
+              dist: val.routes[0].distance,
+              weight: val.routes[0].distance / d1.volume
+            })
+          resolve("ok")
+        });
+      });
+    })
+  }
+
+  minRoute(dics: Dic[], names: string[]):Route{
+    let currentWeight = Number.MAX_SAFE_INTEGER
+    let currentRoute = new Route();
+    for (let i = 0; i < names.length; i++) {
+      const nextNames = names.slice();
+      nextNames.splice(i, 1);
+      const tempRoute = this.minRouteAux(dics, names[i], nextNames);
+      if (tempRoute.weight < currentWeight) {
+        currentWeight = tempRoute.weight;
+        currentRoute = tempRoute;
+      }
+    }
+    return currentRoute;
+  }
+  minRouteAux(dics: Dic[], current: string, remaining: string[]): Route{
+    let currentRoute = new Route();
+    if(remaining.length>0) {
+      let currentWeight = Number.MAX_SAFE_INTEGER
+      let next = '';
+      for (let i = 0; i < remaining.length; i++) {
+        const nextRemaining = remaining.slice();
+        nextRemaining.splice(i, 1);
+        const tempRoute = this.minRouteAux(dics, remaining[i], nextRemaining);
+        if (tempRoute.weight < currentWeight) {
+          currentWeight = tempRoute.weight;
+          currentRoute = tempRoute;
+          next = remaining[i];
         }
-      );
-    });
-
+      }
+      currentRoute.path.unshift(current)
+      let dic = dics.find((d:any) => d.origin===current && d.destination === next)
+      if(dic){
+        currentRoute.weight+= dic.weight;
+      }
+    }else{
+      currentRoute = {weight: 0, path: [current]}
+    }
+    return currentRoute
   }
 
   async calcularDistancias(clusters: Cluster[]) {
     const allDistances = [];
     const allWeigths = [];
-    const allDics = [];
+    const allDics: Dic[][] = [];
 
     for(let i = 0 ; i<clusters.length; i++){
 
@@ -115,7 +158,7 @@ export class MapService {
       const destinations = cluster.destinations;
       const distances = this.make2dArray(destinations.length)
       const weights = this.make2dArray(destinations.length)
-      const dic: { origin: string | undefined; destination: string | undefined; dist: any; weight: number; }[] = []
+      const dic: Dic[] = []
 
       allDistances.push(distances)
       allWeigths.push(weights)
@@ -134,9 +177,6 @@ export class MapService {
         }
       }
     }
-
-    
-
     return {allDistances, allWeigths, allDics}
   }
 }
