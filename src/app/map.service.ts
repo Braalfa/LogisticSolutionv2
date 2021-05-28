@@ -125,21 +125,22 @@ export class MapService {
     let currentRoute = new Route();
     if(remaining.length>0) {
       let currentWeight = Number.MAX_SAFE_INTEGER
-      let next = '';
       for (let i = 0; i < remaining.length; i++) {
         const nextRemaining = remaining.slice();
         nextRemaining.splice(i, 1);
         const tempRoute = this.minRouteAux(dics, remaining[i], nextRemaining);
+        tempRoute.path.unshift(current)
+
+        let next = remaining[i];
+        let dic = dics.find((d:any) => d.origin===current && d.destination === next)
+
+        if(dic){
+          tempRoute.weight+= dic.weight;
+        }
         if (tempRoute.weight < currentWeight) {
           currentWeight = tempRoute.weight;
           currentRoute = tempRoute;
-          next = remaining[i];
         }
-      }
-      currentRoute.path.unshift(current)
-      let dic = dics.find((d:any) => d.origin===current && d.destination === next)
-      if(dic){
-        currentRoute.weight+= dic.weight;
       }
     }else{
       currentRoute = {weight: 0, path: [current]}

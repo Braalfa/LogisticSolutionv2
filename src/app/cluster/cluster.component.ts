@@ -46,7 +46,7 @@ export class ClusterComponent implements AfterViewInit {
     let destinations = this.clusters[numCluster].destinations;
     destinations.push(new Destination())
     let destination = destinations.slice(-1)[0]
-    destination.id = ''+this.clusters[numCluster].destinations.length
+    destination.id = ''+(this.clusters[numCluster].destinations.length-1)
     destination.marker = this.mapService.addMarker(destination.id, this.clusters[numCluster].color)
     destination.long = destination.marker.getLngLat().lng
     destination.lat = destination.marker.getLngLat().lat
@@ -73,7 +73,7 @@ export class ClusterComponent implements AfterViewInit {
   onDeleteDestination(numCluster: number, numDestination: number):void{
     this.removeMarker(numCluster, numDestination)
     this.clusters[numCluster].destinations.splice(numDestination,1)
-    this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i+1).toString()}})
+    this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i).toString()}})
   }
 
   removeMarker(numCluster: number, numDestination: number){

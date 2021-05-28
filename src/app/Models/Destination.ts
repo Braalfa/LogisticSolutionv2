@@ -1,7 +1,7 @@
 import {Marker} from "mapbox-gl";
 
 export class Destination {
-  public volume: number = 0;
+  public volume: number = 1;
   public id: string|undefined;
   public marker: Marker|undefined;
   public lat: number|undefined;
