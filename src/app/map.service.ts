@@ -228,7 +228,9 @@ export class MapService {
       for(let i = 0; i<minRoutes.length; i++){
         let dics = result.allDics[i]
         let route = minRoutes[i]
+        console.log(result.allWeigths)
         console.log(route.path)
+        console.log(route.weight)
         let midpoints = []
         let distributionCenter = {
           lat: 0,
@@ -294,7 +296,6 @@ export class MapService {
         ws_data.push(['Puntos medios:']);
         ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
         // @ts-ignore
-        console.log(allMidPoints.length)
         if(i<allMidPoints.length) {
           allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
         }
@@ -331,7 +332,7 @@ export class MapService {
         return buf;
       }
 
-      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
+      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisantiguo.xlsx');
 
     })
 
@@ -434,7 +435,7 @@ export class MapService {
       return buf;
     }
 
-    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
+    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisnuevo.xlsx');
 
     return allDistributionCenters;
   }
