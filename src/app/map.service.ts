@@ -9,6 +9,9 @@ import {Route} from "./Models/Route";
 import {min} from "rxjs/operators";
 import length from '@turf/length';
 import * as turf from '@turf/helpers';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -146,7 +149,6 @@ export class MapService {
 
         let next = remaining[i];
         let dic = dics.find((d:any) => d.origin===current && d.destination === next)
-        debugger
         if(dic){
           tempRoute.weight+= dic.weight;
         }
@@ -254,7 +256,47 @@ export class MapService {
         destination.volume = 0;
         clusters[i].destinations.push(destination)
       }
+      var wb = XLSX.utils.book_new();
+      wb.Props = {
+        Title: "Logistica Nueva",
+        Subject: "Logistica Nueva",
+        Author: "EAB",
+        CreatedDate: new Date()
+      };
+      wb.SheetNames.push("Logistica Nueva");
+      var ws_data:any = [];  //a row with 2 columns
+
+      clusters.forEach((c,i)=>{
+        ws_data.push([]);
+        ws_data.push(['Cluster:', (i+1).toString()]);
+        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
+        // @ts-ignore
+        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
+
+        ws_data.push(['Puntos medios:']);
+        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom']);
+        // @ts-ignore
+        console.log(allMidPoints.length)
+        if(i<allMidPoints.length) {
+          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long]));
+        }
+      })
+      var ws = XLSX.utils.aoa_to_sheet(ws_data);
+      wb.Sheets["Logistica Nueva"] = ws;
+      var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+
+      function s2ab(s:any) {
+        var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+        var view = new Uint8Array(buf);  //create uint8array as viewer
+        for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+        return buf;
+      }
+
+      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
+
     })
+
+
     return {allMidPoints, allDistributionCenters}
   }
 
@@ -291,6 +333,36 @@ export class MapService {
       destination.volume = 0;
       clusters[i].destinations.push(destination)
     }
+
+    var wb = XLSX.utils.book_new();
+    wb.Props = {
+      Title: "Logistica Antigua",
+      Subject: "Logistica Antigua",
+      Author: "EAB",
+      CreatedDate: new Date()
+    };
+    wb.SheetNames.push("Logistica Antigua");
+    var ws_data:any = [];  //a row with 2 columns
+    clusters.forEach((c,i)=>{
+      ws_data.push([]);
+      ws_data.push(['Cluster:', (i+1).toString()]);
+      ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
+      // @ts-ignore
+      c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
+    })
+    var ws = XLSX.utils.aoa_to_sheet(ws_data);
+    wb.Sheets["Logistica Antigua"] = ws;
+    var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+
+    function s2ab(s:any) {
+      var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+      var view = new Uint8Array(buf);  //create uint8array as viewer
+      for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+      return buf;
+    }
+
+    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'test.xlsx');
+
     return allDistributionCenters;
   }
 }
