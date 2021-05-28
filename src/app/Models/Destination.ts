@@ -8,5 +8,6 @@ export class Destination {
   public long: number|undefined;
   public nameTouched: boolean = false;
   public center: boolean = false;
+  public distanceCenter: number = 0;
   constructor() {}
 }

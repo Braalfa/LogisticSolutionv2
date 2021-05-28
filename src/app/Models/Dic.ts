@@ -9,6 +9,7 @@ export class Dic{
   originLong: number = 0;
   destinationLat: number = 0;
   destinationLong: number = 0;
+  distributionDistance: number =0;
   constructor() {
   }
 }
