@@ -248,6 +248,10 @@ export class MapService {
               weight: (dic.originVolume + dic.destinationVolume) / 2,
               distributionDistance: 0
             })
+            console.log("aa")
+            console.log(dic.destinationVolume)
+            console.log(dic.originVolume)
+            console.log((dic.originVolume + dic.destinationVolume) / 2)
             distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
             distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
           }
