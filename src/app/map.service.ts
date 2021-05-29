@@ -69,6 +69,18 @@ export class MapService {
     this.markers.splice(index,1)
   }
 
+  async obtenerDistancia(long1:number,lat1:number, long2:number, lat2:number): Promise<number>{
+    return new Promise(resolve => {
+      fetch('https://api.mapbox.com/directions/v5/mapbox/driving/'+long1+','+lat1+';'+long2+','+lat2
+        +'?annotations=distance&geometries=geojson&access_token=pk.eyJ1IjoiYWxmYWJyeWFuMTIiLCJhIjoiY2tvNnJ4eXVlMTZxaDJ3bWw0anFhbWQ1aSJ9.CONtvR3H-AQijuy2K6rMoA')
+        .then(res => {
+          res.json().then((val) => {
+            resolve(val.routes[0].distance)
+          })
+        })
+    })
+  }
+
   calcularDistancia(d1: Destination, d2:Destination) {
     console.log('https://api.mapbox.com/directions/v5/mapbox/driving/'+d1.long+','+d1.lat+';'+d2.long+','+d2.lat
       +'?annotations=distance&geometries=geojson&access_token=pk.eyJ1IjoiYWxmYWJyeWFuMTIiLCJhIjoiY2tvNnJ4eXVlMTZxaDJ3bWw0anFhbWQ1aSJ9.CONtvR3H-AQijuy2K6rMoA')
@@ -199,14 +211,17 @@ export class MapService {
   }
 
 
-  interClusterDistances(clusters: Cluster[], allDistributionCenters: { lat: number; long: number; }[]){
+  async interClusterDistances(clusters: Cluster[], allDistributionCenters: { lat: number; long: number; }[]){
     let distances = []
     for(let i =0; i<clusters.length; i++){
       for(let j =i; j<clusters.length; j++){
         if(j!=i){
-          let line = turf.lineString([[allDistributionCenters[i].long, allDistributionCenters[i].lat],
-            [allDistributionCenters[j].long, allDistributionCenters[j].lat]]);
-          distances.push({origin: i, destination: j, distance: length(line, {units: 'kilometers'})});
+          // let line = turf.lineString([[allDistributionCenters[i].long, allDistributionCenters[i].lat],
+          //   [allDistributionCenters[j].long, allDistributionCenters[j].lat]]);
+          // distances.push({origin: i, destination: j, distance: length(line, {units: 'kilometers'})});
+          let distance = await this.obtenerDistancia(allDistributionCenters[i].long, allDistributionCenters[i].lat,
+            allDistributionCenters[j].long, allDistributionCenters[j].lat)
+          distances.push({origin: i, destination: j, distance: distance});
         }
       }
     }
@@ -216,7 +231,7 @@ export class MapService {
   analize(clusters: Cluster[]):{ allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number }[][]; allDistributionCenters: { lat: number; long: number }[] }{
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
     var allDistributionCenters: { lat: number; long: number; }[] = [];
-    this.calcularDistancias(clusters).then(result=>{
+    this.calcularDistancias(clusters).then(async result=>{
       console.log(result.allDics)
       let minRoutes: Route[] = []
       // Calcular las rutas
@@ -258,22 +273,26 @@ export class MapService {
         }
         distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
         distributionCenter.long = distributionCenter.long/(route.path.length-1)
-        midpoints.forEach(m=>{
-          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [m.long, m.lat]]);
-          m.distributionDistance = length(line, {units: 'kilometers'});
-        })
+        for (const m of midpoints) {
+          // let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+          //   [m.long, m.lat]]);
+          m.distributionDistance = await this.obtenerDistancia(distributionCenter.long, distributionCenter.lat,
+            m.long, m.lat)
+
+         // m.distributionDistance = length(line, {units: 'kilometers'});
+        }
         allMidPoints.push(midpoints);
         allDistributionCenters.push(distributionCenter);
 
-        clusters[i].destinations.forEach(d=>
-        {
+        for (const d of clusters[i].destinations) {
           if(d.long && d.lat) {
-            let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-              [d.long, d.lat]]);
-            d.distanceCenter = length(line, {units: 'kilometers'});
+            d.distanceCenter = await this.obtenerDistancia(distributionCenter.long, distributionCenter.lat,
+              d.long, d.lat)
+            // let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+            //   [d.long, d.lat]]);
+            // d.distanceCenter = length(line, {units: 'kilometers'});
           }
-        })
+        }
 
         let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
         marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
@@ -318,7 +337,7 @@ export class MapService {
       ws_data.push(['']);
       ws_data.push(['Distancias intercluster']);
       ws_data.push(['Clusters', 'Distancia']);
-      let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
+      let interClusterDistances = await this.interClusterDistances(clusters,allDistributionCenters)
       interClusterDistances.forEach(d=>{
         ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
       })
@@ -353,42 +372,44 @@ export class MapService {
     return {allMidPoints, allDistributionCenters}
   }
 
-  analizeSimple(clusters: Cluster[]):any {
+  async analizeSimple(clusters: Cluster[]): Promise<any> {
     var allDistributionCenters: { lat: number; long: number; }[] = [];
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
 
     // Calcular los centros cluster por cluster
-    for(let i = 0; i<clusters.length; i++){
+    for (let i = 0; i < clusters.length; i++) {
       let distributionCenter = {
         lat: 0,
         long: 0
       }
       // Calculo intracluster
-      for(let j = 0; j<clusters[i].destinations.length; j++) {
+      for (let j = 0; j < clusters[i].destinations.length; j++) {
         let destination = clusters[i].destinations[j];
         if (destination.lat && destination.long) {
           distributionCenter.lat += destination.lat;
           distributionCenter.long += destination.long;
         }
       }
-      distributionCenter.lat = distributionCenter.lat/(clusters[i].destinations.length)
-      distributionCenter.long = distributionCenter.long/(clusters[i].destinations.length)
+      distributionCenter.lat = distributionCenter.lat / (clusters[i].destinations.length)
+      distributionCenter.long = distributionCenter.long / (clusters[i].destinations.length)
       allDistributionCenters.push(distributionCenter);
 
-      clusters[i].destinations.forEach(d=>
-      {
-        if(d.long && d.lat) {
-          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [d.long, d.lat]]);
-          d.distanceCenter = length(line, {units: 'kilometers'});
-        }
-      })
+      for (const d of clusters[i].destinations) {
+        if (d.long && d.lat) {
+          // let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+          //   [d.long, d.lat]]);
+          // d.distanceCenter = length(line, {units: 'kilometers'});
+          d.distanceCenter = await this.obtenerDistancia(distributionCenter.long, distributionCenter.lat,
+            d.long, d.lat)
 
-      let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+        }
+      }
+
+      let marker = this.addMarker("Centro " + (i + 1), clusters[i].color)
       marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
       marker.setDraggable(false)
       let destination = new Destination();
-      destination.id = "Centro "+(i+1);
+      destination.id = "Centro " + (i + 1);
       destination.marker = marker;
       destination.nameTouched = true;
       destination.long = distributionCenter.long;
@@ -409,14 +430,14 @@ export class MapService {
       CreatedDate: new Date()
     };
     wb.SheetNames.push("Logistica Antigua");
-    var ws_data:any = [];  //a row with 2 columns
-    clusters.forEach((c,i)=>{
+    var ws_data: any = [];  //a row with 2 columns
+    clusters.forEach((c, i) => {
       ws_data.push([]);
       ws_data.push([]);
-      ws_data.push(['Cluster:', (i+1).toString()]);
-      ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia Centro']);
+      ws_data.push(['Cluster:', (i + 1).toString()]);
+      ws_data.push(['Nombre', 'Volumen', 'Latitud', 'Longitud', 'Distancia Centro']);
       // @ts-ignore
-      c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
+      c.destinations.forEach(d => ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
     })
 
     ws_data.push(['']);
@@ -424,14 +445,14 @@ export class MapService {
 
     ws_data.push(['Distancias intercluster']);
     ws_data.push(['Clusters', 'Distancia']);
-    let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
-    interClusterDistances.forEach(d=>{
-      ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
+    let interClusterDistances = await this.interClusterDistances(clusters, allDistributionCenters)
+    interClusterDistances.forEach(d => {
+      ws_data.push([(d.origin + 1) + '-' + (d.destination + 1), d.distance]);
     })
 
-    let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
-    let maxintra = Math.max.apply(Math,clusters.map(c=>Math.max.apply(Math,c.destinations.map(d=>d.distanceCenter))))
-    let index = mininter/maxintra;
+    let mininter = Math.min.apply(Math, interClusterDistances.map(d => d.distance))
+    let maxintra = Math.max.apply(Math, clusters.map(c => Math.max.apply(Math, c.destinations.map(d => d.distanceCenter))))
+    let index = mininter / maxintra;
 
     ws_data.push(['']);
     ws_data.push(['']);
@@ -439,16 +460,16 @@ export class MapService {
 
     var ws = XLSX.utils.aoa_to_sheet(ws_data);
     wb.Sheets["Logistica Antigua"] = ws;
-    var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+    var wbout = XLSX.write(wb, {bookType: 'xlsx', type: 'binary'});
 
-    function s2ab(s:any) {
+    function s2ab(s: any) {
       var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
       var view = new Uint8Array(buf);  //create uint8array as viewer
-      for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+      for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
       return buf;
     }
 
-    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisviejo.xlsx');
+    saveAs(new Blob([s2ab(wbout)], {type: "application/octet-stream"}), 'analisisviejo.xlsx');
 
     return allDistributionCenters;
   }
