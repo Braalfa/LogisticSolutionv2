@@ -183,7 +183,7 @@ export class MapService {
 
       for(let j = 0; j<destinations.length; j++){
         const d1 = destinations[j];
-        for(let k = j+1; k<destinations.length; k++) {
+        for(let k = j; k<destinations.length; k++) {
           if (k != j) {
             const d2 = destinations[k];
             await this.calcularDistanciasAux(k, j, d1, d2, distances, weights, dic)
@@ -193,6 +193,11 @@ export class MapService {
           }
         }
       }
+      let maximums = distances.map(d=>Math.max.apply(Math,d));
+      let totalVolume = destinations.map(d=>d.volume).reduce((a, b) => a + b, 0);
+      dic.forEach(d=>{
+        d.weight = (1/(d.destinationVolume/totalVolume)*(1/(d.dist/maximums[parseInt(d.destination)])));
+      })
     }
 
     return {allDistances, allWeigths, allDics}
@@ -248,10 +253,6 @@ export class MapService {
               weight: (dic.originVolume + dic.destinationVolume) / 2,
               distributionDistance: 0
             })
-            console.log("aa")
-            console.log(dic.destinationVolume)
-            console.log(dic.originVolume)
-            console.log((dic.originVolume + dic.destinationVolume) / 2)
             distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
             distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
           }
