@@ -266,6 +266,15 @@ export class MapService {
         allMidPoints.push(midpoints);
         allDistributionCenters.push(distributionCenter);
 
+        clusters[i].destinations.forEach(d=>
+        {
+          if(d.long && d.lat) {
+            let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+              [d.long, d.lat]]);
+            d.distanceCenter = length(line, {units: 'kilometers'});
+          }
+        })
+
         let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
         marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
         marker.setDraggable(false)
@@ -293,9 +302,9 @@ export class MapService {
         ws_data.push([]);
         ws_data.push([]);
         ws_data.push(['Cluster:', (i+1).toString()]);
-        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
+        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia al Centro']);
         // @ts-ignore
-        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
+        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
 
         ws_data.push(['Puntos medios:']);
         ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
@@ -315,9 +324,9 @@ export class MapService {
       })
 
       let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
-      let maxintra = Math.max.apply(Math,allMidPoints.map(mp=>Math.max.apply(Math,mp.map(m=> m.distributionDistance))))
+      // let maxintra = Math.max.apply(Math,allMidPoints.map(mp=>Math.max.apply(Math,mp.map(m=> m.distributionDistance))))
+      let maxintra = Math.max.apply(Math,clusters.map(c=>Math.max.apply(Math,c.destinations.map(d=>d.distanceCenter))))
 
-      //   let maxintra = Math.max.apply(Math,clusters.map(c=>Math.max.apply(Math,c.destinations.map(d=>d.distanceCenter))))
       let index = mininter/maxintra;
 
       ws_data.push(['']);
