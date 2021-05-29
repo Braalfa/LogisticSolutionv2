@@ -196,10 +196,14 @@ export class MapService {
       let maximums = distances.map(d=>Math.max.apply(Math,d));
       let totalVolume = destinations.map(d=>d.volume).reduce((a, b) => a + b, 0);
       dic.forEach(d=>{
-        d.weight = (1/(d.destinationVolume/totalVolume)*(1/(d.dist/maximums[parseInt(d.destination)])));
+        d.weight = (1/((d.destinationVolume/totalVolume)*(1/(d.dist/maximums[parseInt(d.destination)]))));
       })
+      for(let i =0; i<weights.length; i++){
+        for(let j = 0; j<weights.length; j++){
+          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]/maximums[j]))));
+        }
+      }
     }
-
     return {allDistances, allWeigths, allDics}
   }
 
@@ -222,12 +226,12 @@ export class MapService {
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
     var allDistributionCenters: { lat: number; long: number; }[] = [];
     this.calcularDistancias(clusters).then(result=>{
-      console.log(result.allDics)
       let minRoutes: Route[] = []
       // Calcular las rutas
       for(let i = 0; i< result.allDics.length; i++){
         minRoutes.push(this.minRoute(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
       }
+      console.log(result.allDics)
 
       // Calcular los centros cluster por cluster
       for(let i = 0; i<minRoutes.length; i++){
@@ -299,14 +303,26 @@ export class MapService {
       wb.SheetNames.push("Logistica Nueva");
       var ws_data:any = [];  //a row with 2 columns
 
+
       clusters.forEach((c,i)=>{
-        ws_data.push([]);
-        ws_data.push([]);
         ws_data.push(['Cluster:', (i+1).toString()]);
+        ws_data.push([]);
+        ws_data.push(['Distancias']);
+        ws_data.push(c.destinations.map(d=>d.id));
+        result.allDistances[i].forEach(da=>{
+          ws_data.push(da)
+        })
+        ws_data.push([]);
+        ws_data.push(['Pesos']);
+        ws_data.push(c.destinations.map(d=>d.id));
+        result.allWeigths[i].forEach(wa=>{
+          ws_data.push(wa)
+        })
+        ws_data.push([]);
         ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia al Centro']);
         // @ts-ignore
         c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
-
+        ws_data.push([]);
         ws_data.push(['Puntos medios:']);
         ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
         // @ts-ignore

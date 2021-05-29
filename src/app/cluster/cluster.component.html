@@ -47,7 +47,7 @@
                     <div class="col-3 pl-1 pr-1 ">
                       <input required type="text" id="{{'Id'+i+j}}" name="{{'Id'+i+j}}" class="form-control"
                              placeholder="{{'Nombre'}}" [(ngModel)]="destination.id" #id="ngModel" (ngModelChange)="updateMarkerTag(j,i)"
-                             [class.is-invalid]="id.invalid && (id.dirty || id.touched)" [disabled]="destination.center">
+                             [class.is-invalid]="id.invalid && (id.dirty || id.touched)" disabled>
                     </div>
                     <div class="col-3 pl-1 pr-1">
                       <input required pattern="[0-9]*" type="text" id="{{'Volume'+i+j}}" name="{{'Volume'+i+j}}" class="form-control"
