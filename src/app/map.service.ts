@@ -237,11 +237,11 @@ export class MapService {
       let maximums = distances.map(d=>Math.max.apply(Math,d));
       let totalVolume = destinations.map(d=>d.volume).reduce((a, b) => a + b, 0);
       dic.forEach(d=>{
-        d.weight = (1/((d.destinationVolume/totalVolume)*(1/(d.dist/maximums[parseInt(d.destination)]))));
+        d.weight = (1/((d.destinationVolume/totalVolume)*(1/(d.dist))));
       })
-      for(let i =0; i<weights.length; i++){
+      for(let k =0; k<weights.length; k++){
         for(let j = 0; j<weights.length; j++){
-          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]/maximums[j]))));
+          weights[k][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[k][j]))));
         }
       }
     }
@@ -281,7 +281,7 @@ export class MapService {
         let cluster = clusters[i].destinations
         let totalLitros = 0;
         for(let j = 0; j< cluster.length; j++){
-          totalLitros = cluster[i].volume;
+          totalLitros += cluster[j].volume;
         }
         let acumulado = 0;
         let litros = 0;
