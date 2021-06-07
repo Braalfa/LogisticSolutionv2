@@ -124,6 +124,47 @@ export class MapService {
     })
   }
 
+  minRoute2(dics: Dic[], names: string[]):Route{
+    let currentWeight = Number.MAX_SAFE_INTEGER
+    let currentRoute = new Route();
+    for (let i = 0; i < names.length; i++) {
+      const nextNames = names.slice();
+      nextNames.splice(i, 1);
+      const tempRoute = this.minRoute2Aux(dics, names[i], nextNames);
+      if (tempRoute.weight < currentWeight) {
+        currentWeight = tempRoute.weight;
+        currentRoute = tempRoute;
+      }
+    }
+    return currentRoute;
+  }
+  minRoute2Aux(dics: Dic[], current: string, remaining: string[]): Route{
+    let currentRoute = new Route();
+    if(remaining.length>0) {
+      let currentWeight = Number.MAX_SAFE_INTEGER
+      for (let i = 0; i < remaining.length; i++) {
+        const nextRemaining = remaining.slice();
+        nextRemaining.splice(i, 1);
+        const tempRoute = this.minRoute2Aux(dics, remaining[i], nextRemaining);
+        tempRoute.path.unshift(current)
+
+        let next = remaining[i];
+        let dic = dics.find((d:any) => d.origin===current && d.destination === next)
+        if(dic){
+          tempRoute.weight+= dic.dist;
+        }
+        if (tempRoute.weight < currentWeight) {
+          currentWeight = tempRoute.weight;
+          currentRoute = tempRoute;
+        }
+      }
+    }else{
+      currentRoute = {weight: 0, path: [current]}
+    }
+    return currentRoute
+  }
+
+
   minRoute(dics: Dic[], names: string[]):Route{
     let currentWeight = Number.MAX_SAFE_INTEGER
     let currentRoute = new Route();
@@ -200,7 +241,7 @@ export class MapService {
       })
       for(let i =0; i<weights.length; i++){
         for(let j = 0; j<weights.length; j++){
-          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]/maximums[j]))));
+          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]))));
         }
       }
     }
@@ -232,6 +273,28 @@ export class MapService {
         minRoutes.push(this.minRoute(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
       }
       console.log(result.allDics)
+
+      let listLitros: any[] = [];
+      for(let i = 0; i<minRoutes.length; i++){
+        let route = minRoutes[i]
+        let dics = result.allDics[i]
+        let cluster = clusters[i].destinations
+        let totalLitros = 0;
+        for(let j = 0; j< cluster.length; j++){
+          totalLitros = cluster[i].volume;
+        }
+        let acumulado = 0;
+        let litros = 0;
+        for(let j = 0; j<route.path.length-1; j++) {
+          let dic = dics.find((d: any) => d.origin === route.path[j] && d.destination === route.path[j + 1])
+          // @ts-ignore
+          acumulado += dic.originVolume;
+          if (dic) {
+            litros += dic.dist*(0.301+((totalLitros-acumulado)*0.301*0.01/45))
+          }
+        }
+        listLitros.push(litros)
+      }
 
       // Calcular los centros cluster por cluster
       for(let i = 0; i<minRoutes.length; i++){
@@ -293,6 +356,8 @@ export class MapService {
         destination.volume = 0;
         clusters[i].destinations.push(destination)
       }
+
+
       var wb = XLSX.utils.book_new();
       wb.Props = {
         Title: "Logistica Nueva",
@@ -329,27 +394,10 @@ export class MapService {
         if(i<allMidPoints.length) {
           allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
         }
+        ws_data.push([]);
+        ws_data.push([]);
+        ws_data.push(['Litros:', listLitros[i]]);
       })
-
-      ws_data.push(['']);
-      ws_data.push(['']);
-      ws_data.push(['Distancias intercluster']);
-      ws_data.push(['Clusters', 'Distancia']);
-      let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
-      interClusterDistances.forEach(d=>{
-        ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
-      })
-
-      let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
-      // let maxintra = Math.max.apply(Math,allMidPoints.map(mp=>Math.max.apply(Math,mp.map(m=> m.distributionDistance))))
-      let maxintra = Math.max.apply(Math,clusters.map(c=>Math.max.apply(Math,c.destinations.map(d=>d.distanceCenter))))
-
-      let index = mininter/maxintra;
-
-      ws_data.push(['']);
-      ws_data.push(['']);
-      ws_data.push(['Indice Dunn', index]);
-
 
       var ws = XLSX.utils.aoa_to_sheet(ws_data);
       wb.Sheets["Logistica Nueva"] = ws;
@@ -370,104 +418,159 @@ export class MapService {
     return {allMidPoints, allDistributionCenters}
   }
 
-  analizeSimple(clusters: Cluster[]):any {
-    var allDistributionCenters: { lat: number; long: number; }[] = [];
+  analizeSimple(clusters: Cluster[]):{ allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number }[][]; allDistributionCenters: { lat: number; long: number }[] }{
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
-
-    // Calcular los centros cluster por cluster
-    for(let i = 0; i<clusters.length; i++){
-      let distributionCenter = {
-        lat: 0,
-        long: 0
+    var allDistributionCenters: { lat: number; long: number; }[] = [];
+    this.calcularDistancias(clusters).then(result=>{
+      let minRoutes: Route[] = []
+      // Calcular las rutas
+      for(let i = 0; i< result.allDics.length; i++){
+        minRoutes.push(this.minRoute2(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
       }
-      // Calculo intracluster
-      for(let j = 0; j<clusters[i].destinations.length; j++) {
-        let destination = clusters[i].destinations[j];
-        if (destination.lat && destination.long) {
-          distributionCenter.lat += destination.lat;
-          distributionCenter.long += destination.long;
+      console.log(result.allDics)
+
+      let listLitros: any[] = [];
+      for(let i = 0; i<minRoutes.length; i++){
+        let route = minRoutes[i]
+        let dics = result.allDics[i]
+        let cluster = clusters[i].destinations
+        let totalLitros = 0;
+        for(let j = 0; j< cluster.length; j++){
+          totalLitros = cluster[i].volume;
         }
+        let acumulado = 0;
+        let litros = 0;
+        for(let j = 0; j<route.path.length-1; j++) {
+          let dic = dics.find((d: any) => d.origin === route.path[j] && d.destination === route.path[j + 1])
+          // @ts-ignore
+          acumulado += dic.originVolume;
+          if (dic) {
+            litros += dic.dist*(0.301+((totalLitros-acumulado)*0.301*0.01/45))
+          }
+        }
+        listLitros.push(litros)
       }
-      distributionCenter.lat = distributionCenter.lat/(clusters[i].destinations.length)
-      distributionCenter.long = distributionCenter.long/(clusters[i].destinations.length)
-      allDistributionCenters.push(distributionCenter);
 
-      clusters[i].destinations.forEach(d=>
-      {
-        if(d.long && d.lat) {
+      // Calcular los centros cluster por cluster
+      for(let i = 0; i<minRoutes.length; i++){
+        let dics = result.allDics[i]
+        let route = minRoutes[i]
+        console.log(result.allWeigths)
+        console.log(route.path)
+        console.log(route.weight)
+        let midpoints = []
+        let distributionCenter = {
+          lat: 0,
+          long: 0
+        }
+        // Calculo intracluster
+        for(let j = 0; j<route.path.length-1; j++) {
+          let dic = dics.find((d: any) => d.origin === route.path[j] && d.destination === route.path[j + 1])
+          if (dic) {
+            midpoints.push({
+              origin: dic.origin,
+              destination: dic.destination,
+              lat: (dic.originLat + dic.destinationLat) / 2,
+              long: (dic.originLong + dic.destinationLong) / 2,
+              weight: (dic.originVolume + dic.destinationVolume) / 2,
+              distributionDistance: 0
+            })
+            distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
+            distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
+          }
+        }
+        distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
+        distributionCenter.long = distributionCenter.long/(route.path.length-1)
+        midpoints.forEach(m=>{
           let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [d.long, d.lat]]);
-          d.distanceCenter = length(line, {units: 'kilometers'});
+            [m.long, m.lat]]);
+          m.distributionDistance = length(line, {units: 'kilometers'});
+        })
+        allMidPoints.push(midpoints);
+        allDistributionCenters.push(distributionCenter);
+
+        clusters[i].destinations.forEach(d=>
+        {
+          if(d.long && d.lat) {
+            let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+              [d.long, d.lat]]);
+            d.distanceCenter = length(line, {units: 'kilometers'});
+          }
+        })
+
+        let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+        marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
+        marker.setDraggable(false)
+        let destination = new Destination();
+        destination.id = "Centro "+(i+1);
+        destination.marker = marker;
+        destination.nameTouched = true;
+        destination.long = distributionCenter.long;
+        destination.lat = distributionCenter.lat;
+        destination.center = true;
+        destination.volume = 0;
+        clusters[i].destinations.push(destination)
+      }
+
+
+      var wb = XLSX.utils.book_new();
+      wb.Props = {
+        Title: "Logistica Vieja",
+        Subject: "Logistica Vieja",
+        Author: "EAB",
+        CreatedDate: new Date()
+      };
+      wb.SheetNames.push("Logistica Vieja");
+      var ws_data:any = [];  //a row with 2 columns
+
+
+      clusters.forEach((c,i)=>{
+        ws_data.push(['Cluster:', (i+1).toString()]);
+        ws_data.push([]);
+        ws_data.push(['Distancias']);
+        ws_data.push(c.destinations.map(d=>d.id));
+        result.allDistances[i].forEach(da=>{
+          ws_data.push(da)
+        })
+        ws_data.push([]);
+        ws_data.push(['Pesos']);
+        ws_data.push(c.destinations.map(d=>d.id));
+        result.allWeigths[i].forEach(wa=>{
+          ws_data.push(wa)
+        })
+        ws_data.push([]);
+        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia al Centro']);
+        // @ts-ignore
+        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
+        ws_data.push([]);
+        ws_data.push(['Puntos medios:']);
+        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
+        // @ts-ignore
+        if(i<allMidPoints.length) {
+          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
         }
+        ws_data.push([]);
+        ws_data.push([]);
+        ws_data.push(['Litros:', listLitros[i]]);
       })
 
-      let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
-      marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
-      marker.setDraggable(false)
-      let destination = new Destination();
-      destination.id = "Centro "+(i+1);
-      destination.marker = marker;
-      destination.nameTouched = true;
-      destination.long = distributionCenter.long;
-      destination.lat = distributionCenter.lat;
-      destination.center = true;
-      destination.volume = 0;
-      clusters[i].destinations.push(destination)
-    }
+      var ws = XLSX.utils.aoa_to_sheet(ws_data);
+      wb.Sheets["Logistica Vieja"] = ws;
+      var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
 
+      function s2ab(s:any) {
+        var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+        var view = new Uint8Array(buf);  //create uint8array as viewer
+        for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+        return buf;
+      }
 
-    // Excel
+      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisviejo.xlsx');
 
-    var wb = XLSX.utils.book_new();
-    wb.Props = {
-      Title: "Logistica Antigua",
-      Subject: "Logistica Antigua",
-      Author: "EAB",
-      CreatedDate: new Date()
-    };
-    wb.SheetNames.push("Logistica Antigua");
-    var ws_data:any = [];  //a row with 2 columns
-    clusters.forEach((c,i)=>{
-      ws_data.push([]);
-      ws_data.push([]);
-      ws_data.push(['Cluster:', (i+1).toString()]);
-      ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia Centro']);
-      // @ts-ignore
-      c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
     })
 
-    ws_data.push(['']);
-    ws_data.push(['']);
 
-    ws_data.push(['Distancias intercluster']);
-    ws_data.push(['Clusters', 'Distancia']);
-    let interClusterDistances = this.interClusterDistances(clusters,allDistributionCenters)
-    interClusterDistances.forEach(d=>{
-      ws_data.push([(d.origin+1)+'-'+(d.destination+1), d.distance]);
-    })
-
-    let mininter = Math.min.apply(Math,interClusterDistances.map(d=>d.distance))
-    let maxintra = Math.max.apply(Math,clusters.map(c=>Math.max.apply(Math,c.destinations.map(d=>d.distanceCenter))))
-    let index = mininter/maxintra;
-
-    ws_data.push(['']);
-    ws_data.push(['']);
-    ws_data.push(['Indice Dunn', index]);
-
-    var ws = XLSX.utils.aoa_to_sheet(ws_data);
-    wb.Sheets["Logistica Antigua"] = ws;
-    var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
-
-    function s2ab(s:any) {
-      var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
-      var view = new Uint8Array(buf);  //create uint8array as viewer
-      for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
-      return buf;
-    }
-
-    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisviejo.xlsx');
-
-    return allDistributionCenters;
+    return {allMidPoints, allDistributionCenters}
   }
 }
 
