@@ -431,7 +431,7 @@ export class MapService {
         let cluster = clusters[i].destinations
         let totalLitros = 0;
         for(let j = 0; j< cluster.length; j++){
-          totalLitros = cluster[i].volume;
+          totalLitros = cluster[j].volume;
         }
         let acumulado = 0;
         let litros = 0;
