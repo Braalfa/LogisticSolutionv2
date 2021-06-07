@@ -106,6 +106,16 @@ export class ClusterComponent implements AfterViewInit {
   }
 
   analizeSimple():void{
+    this.clusters.forEach(c=>{
+      c.destinations.forEach(d=>{
+        // @ts-ignore
+        d.lat = parseFloat(d.lat);
+        // @ts-ignore
+        d.long = parseFloat(d.long);
+        // @ts-ignore
+        d.volume = parseInt(d.volume);
+      })
+    })
     for(let i = 0; i<this.clusters.length; i++){
       this.removeCenters(i);
     }

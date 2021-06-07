@@ -241,7 +241,7 @@ export class MapService {
       })
       for(let i =0; i<weights.length; i++){
         for(let j = 0; j<weights.length; j++){
-          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]))));
+          weights[i][j] = (1/((destinations[j].volume/totalVolume)*(1/(distances[i][j]/maximums[j]))));
         }
       }
     }
@@ -318,7 +318,7 @@ export class MapService {
               lat: (dic.originLat + dic.destinationLat) / 2,
               long: (dic.originLong + dic.destinationLong) / 2,
               weight: (dic.originVolume + dic.destinationVolume) / 2,
-              distributionDistance: 0
+              distributionDistance: dic.dist
             })
             distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
             distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
@@ -326,11 +326,6 @@ export class MapService {
         }
         distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
         distributionCenter.long = distributionCenter.long/(route.path.length-1)
-        midpoints.forEach(m=>{
-          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [m.long, m.lat]]);
-          m.distributionDistance = length(line, {units: 'kilometers'});
-        })
         allMidPoints.push(midpoints);
         allDistributionCenters.push(distributionCenter);
 
@@ -384,12 +379,12 @@ export class MapService {
           ws_data.push(wa)
         })
         ws_data.push([]);
-        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia al Centro']);
+        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
         // @ts-ignore
-        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
+        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
         ws_data.push([]);
         ws_data.push(['Puntos medios:']);
-        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
+        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
         // @ts-ignore
         if(i<allMidPoints.length) {
           allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
@@ -445,8 +440,9 @@ export class MapService {
           // @ts-ignore
           acumulado += dic.originVolume;
           if (dic) {
-            litros += dic.dist*(0.301+((totalLitros-acumulado)*0.301*0.01/45))
+            litros += dic.dist*(0.301+((totalLitros-acumulado)*0.301*0.01/45.0))
           }
+          console.log(litros)
         }
         listLitros.push(litros)
       }
@@ -473,7 +469,7 @@ export class MapService {
               lat: (dic.originLat + dic.destinationLat) / 2,
               long: (dic.originLong + dic.destinationLong) / 2,
               weight: (dic.originVolume + dic.destinationVolume) / 2,
-              distributionDistance: 0
+              distributionDistance: dic.dist
             })
             distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
             distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
@@ -481,11 +477,6 @@ export class MapService {
         }
         distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
         distributionCenter.long = distributionCenter.long/(route.path.length-1)
-        midpoints.forEach(m=>{
-          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [m.long, m.lat]]);
-          m.distributionDistance = length(line, {units: 'kilometers'});
-        })
         allMidPoints.push(midpoints);
         allDistributionCenters.push(distributionCenter);
 
@@ -533,18 +524,12 @@ export class MapService {
           ws_data.push(da)
         })
         ws_data.push([]);
-        ws_data.push(['Pesos']);
-        ws_data.push(c.destinations.map(d=>d.id));
-        result.allWeigths[i].forEach(wa=>{
-          ws_data.push(wa)
-        })
-        ws_data.push([]);
-        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud', 'Distancia al Centro']);
+        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
         // @ts-ignore
-        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long, d.distanceCenter]));
+        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
         ws_data.push([]);
         ws_data.push(['Puntos medios:']);
-        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia al Centro']);
+        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
         // @ts-ignore
         if(i<allMidPoints.length) {
           allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
