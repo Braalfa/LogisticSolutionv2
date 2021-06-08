@@ -11,6 +11,7 @@ import length from '@turf/length';
 import * as turf from '@turf/helpers';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import {parse, stringify} from 'flatted';
 
 @Injectable({
   providedIn: 'root'
@@ -54,6 +55,24 @@ export class MapService {
     return marker;
   }
 
+  addCenterMarker(tag: string, color: string) {
+    var popup = new mapboxgl.Popup()
+      .setText('Description')
+      .addTo(this.map);
+
+    var marker = new mapboxgl.Marker({
+      draggable: true,
+      color: color
+    })
+      .setLngLat(this.map.getCenter())
+      .addTo(this.map)
+      .setPopup(new mapboxgl.Popup({closeButton: false, closeOnClick: false}).setHTML("<p style='color:"+ color+"'>"+tag+"</p>"));
+    marker.togglePopup(); // toggle popup open or closed
+    this.markers.push(marker)
+    return marker;
+  }
+
+
   setTextToMarker(marker: Marker, tag: string, color: string){
     marker.getPopup().setHTML("<h5 style='color:"+ color+"'>"+tag+"</h5>");
   }
@@ -89,16 +108,16 @@ export class MapService {
     return new Promise(resolve => {
       this.calcularDistancia(d1, d2).then(res => {
         res.json().then((val) => {
-            distances[j][k] = val.routes[0].distance;
-            distances[k][j] = val.routes[0].distance;
-            weights[j][k] = val.routes[0].distance / d2.volume;
-            weights[k][j] = val.routes[0].distance / d1.volume;
+            distances[j][k] = val.routes[0].distance/1000.0;
+            distances[k][j] = val.routes[0].distance/1000.0;
+            weights[j][k] = val.routes[0].distance / 1000.0 / d2.volume;
+            weights[k][j] = val.routes[0].distance / 1000.0 / d1.volume;
 
             dic.push({
               origin: d1.id,
               destination: d2.id,
-              dist: val.routes[0].distance,
-              weight: val.routes[0].distance / d2.volume,
+              dist: val.routes[0].distance /1000.0,
+              weight: val.routes[0].distance /1000.0 / d2.volume,
               originVolume: d1.volume,
               destinationVolume: d2.volume,
               originLat: d1.lat,
@@ -109,8 +128,8 @@ export class MapService {
             dic.push({
               origin: d2.id,
               destination: d1.id,
-              dist: val.routes[0].distance,
-              weight: val.routes[0].distance / d1.volume,
+              dist: val.routes[0].distance /1000.0,
+              weight: val.routes[0].distance /1000.0 / d1.volume,
               originVolume: d2.volume,
               destinationVolume: d1.volume,
               originLat: d2.lat,
@@ -207,7 +226,7 @@ export class MapService {
     return currentRoute
   }
 
-  async calcularDistancias(clusters: Cluster[]) {
+  async calcularDistancias(clusters: Cluster[], deleteLast: boolean) {
     const allDistances = [];
     const allWeigths = [];
     const allDics: Dic[][] = [];
@@ -215,7 +234,10 @@ export class MapService {
     for(let i = 0 ; i<clusters.length; i++){
 
       const cluster = clusters[i];
-      const destinations = cluster.destinations;
+      var destinations = cluster.destinations;
+      if(deleteLast){
+        destinations = destinations.slice(0,-1);
+      }
       const distances = this.make2dArray(destinations.length)
       const weights = this.make2dArray(destinations.length)
       const dic: Dic[] = []
@@ -265,10 +287,21 @@ export class MapService {
     return distances;
   }
 
-  analize(clusters: Cluster[]):{ allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number }[][]; allDistributionCenters: { lat: number; long: number }[] }{
+  async analize(clusters: Cluster[]) : Promise<number>{
+    return new Promise(async resolve=>{
+      var litrosNuevos = 0;
+      var litrosViejo = 0;
+      litrosNuevos = await this.analize1(clusters)
+      litrosViejo = await this.analizeSimple(clusters);
+      var mejora = 100*(litrosViejo-litrosNuevos)/litrosViejo
+      resolve(mejora)
+    })
+  }
+
+  async analize1(clusters: Cluster[]): Promise<number> {
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
-    var allDistributionCenters: { lat: number; long: number; }[] = [];
-    this.calcularDistancias(clusters).then(result=>{
+    let listLitros: any[] = [];
+    await this.calcularDistancias(clusters, false).then(async result=>{
       let minRoutes: Route[] = []
 
       // Calcular las rutas
@@ -278,7 +311,6 @@ export class MapService {
       }
       console.log(result.allDics)
 
-      let listLitros: any[] = [];
       for(let i = 0; i<minRoutes.length; i++){
         let route = minRoutes[i]
         let dics = result.allDics[i]
@@ -332,7 +364,6 @@ export class MapService {
         distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
         distributionCenter.long = distributionCenter.long/(route.path.length-1)
         allMidPoints.push(midpoints);
-        allDistributionCenters.push(distributionCenter);
 
         clusters[i].destinations.forEach(d=>
         {
@@ -343,11 +374,11 @@ export class MapService {
           }
         })
 
-        let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+        let marker = this.addCenterMarker("Centro "+(i+1) + " - Método Nuevo", clusters[i].color)
         marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
         marker.setDraggable(false)
         let destination = new Destination();
-        destination.id = "Centro "+(i+1);
+        destination.id = "Centro Nuevo";
         destination.marker = marker;
         destination.nameTouched = true;
         destination.long = distributionCenter.long;
@@ -373,20 +404,20 @@ export class MapService {
         ws_data.push(['Cluster:', (i+1).toString()]);
         ws_data.push([]);
         ws_data.push(['Distancias']);
-        ws_data.push(c.destinations.map(d=>d.id));
+        ws_data.push(c.destinations.slice(0,-1).map(d=>d.id));
         result.allDistances[i].forEach(da=>{
           ws_data.push(da)
         })
         ws_data.push([]);
-        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
+        ws_data.push(['Nombre' , 'Peso', 'Latitud', 'Longitud']);
         // @ts-ignore
         c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
         ws_data.push([]);
         ws_data.push(['Puntos medios:']);
-        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
+        ws_data.push(['Ruta', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
         // @ts-ignore
         if(i<allMidPoints.length) {
-          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
+          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.lat, m.long, m.distributionDistance]));
         }
         ws_data.push([]);
         ws_data.push([]);
@@ -404,30 +435,26 @@ export class MapService {
         return buf;
       }
 
-      saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisnuevo.xlsx');
-
+      await saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'analisisnuevo.xlsx');
     })
-
-
-    return {allMidPoints, allDistributionCenters}
+    return new Promise(resolve => {resolve(listLitros.reduce((a, b) => a + b, 0))})
   }
 
-  analizeSimple(clusters: Cluster[]):{ allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number }[][]; allDistributionCenters: { lat: number; long: number }[] }{
+  async analizeSimple(clusters: Cluster[]): Promise<number>{
     var allMidPoints: { origin: string; destination: string; lat: number; long: number; weight: number; distributionDistance: number; }[][] = [];
-    var allDistributionCenters: { lat: number; long: number; }[] = [];
-    this.calcularDistancias(clusters).then(result=>{
+    let listLitros: any[] = [];
+    await this.calcularDistancias(clusters, true).then(async result=>{
       let minRoutes: Route[] = []
       // Calcular las rutas
       for(let i = 0; i< result.allDics.length; i++){
-        minRoutes.push(this.minRoute2(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
+        minRoutes.push(this.minRoute2(result.allDics[i], clusters[i].destinations.slice(0,-1).map(d=>d.id) as string[]))
       }
       console.log(result.allDics)
-
-      let listLitros: any[] = [];
+      console.log("asasasasasasasasasasasa")
       for(let i = 0; i<minRoutes.length; i++){
         let route = minRoutes[i]
         let dics = result.allDics[i]
-        let cluster = clusters[i].destinations
+        let cluster = clusters[i].destinations.slice(0,-1)
         let totalLitros = 0;
         for(let j = 0; j< cluster.length; j++){
           totalLitros += cluster[j].volume;
@@ -477,9 +504,8 @@ export class MapService {
         distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
         distributionCenter.long = distributionCenter.long/(route.path.length-1)
         allMidPoints.push(midpoints);
-        allDistributionCenters.push(distributionCenter);
 
-        clusters[i].destinations.forEach(d=>
+        clusters[i].destinations.slice(0,-1).forEach(d=>
         {
           if(d.long && d.lat) {
             let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
@@ -488,11 +514,11 @@ export class MapService {
           }
         })
 
-        let marker = this.addMarker("Centro "+(i+1), clusters[i].color)
+        let marker = this.addCenterMarker("Centro "+(i+1)+" - Método Anterior", clusters[i].color)
         marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
         marker.setDraggable(false)
         let destination = new Destination();
-        destination.id = "Centro "+(i+1);
+        destination.id = "Centro Anterior";
         destination.marker = marker;
         destination.nameTouched = true;
         destination.long = distributionCenter.long;
@@ -518,20 +544,20 @@ export class MapService {
         ws_data.push(['Cluster:', (i+1).toString()]);
         ws_data.push([]);
         ws_data.push(['Distancias']);
-        ws_data.push(c.destinations.map(d=>d.id));
+        ws_data.push(c.destinations.slice(0,-2).map(d=>d.id));
         result.allDistances[i].forEach(da=>{
           ws_data.push(da)
         })
         ws_data.push([]);
-        ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
+        ws_data.push(['Nombre' , 'Peso', 'Latitud', 'Longitud']);
         // @ts-ignore
         c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
         ws_data.push([]);
         ws_data.push(['Puntos medios:']);
-        ws_data.push(['Ruta' , 'Volumen Prom', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
+        ws_data.push(['Ruta', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
         // @ts-ignore
         if(i<allMidPoints.length) {
-          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.weight, m.lat, m.long, m.distributionDistance]));
+          allMidPoints[i].forEach(m => ws_data.push([m.origin + '-' + m.destination, m.lat, m.long, m.distributionDistance]));
         }
         ws_data.push([]);
         ws_data.push([]);
@@ -553,8 +579,7 @@ export class MapService {
 
     })
 
-
-    return {allMidPoints, allDistributionCenters}
+    return new Promise(resolve => {resolve(listLitros.reduce((a, b) => a + b, 0))})
   }
 }
 

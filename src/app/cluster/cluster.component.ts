@@ -13,6 +13,8 @@ export class ClusterComponent implements AfterViewInit {
   clusters: Cluster[] = [{destinations: [], color:'#3FB1CE'}];
   blockChecking = false;
   result: any;
+  showResults = false;
+  improvement = 0;
   constructor(private mapService: MapService) { }
 
   ngAfterViewInit(): void {
@@ -102,7 +104,7 @@ export class ClusterComponent implements AfterViewInit {
     for(let i = 0; i<this.clusters.length; i++){
       this.removeCenters(i);
     }
-    this.mapService.analize(this.clusters)
+    this.mapService.analize(this.clusters).then(r=>{this.showResults = true;this.improvement = r})
   }
 
   analizeSimple():void{
@@ -119,23 +121,29 @@ export class ClusterComponent implements AfterViewInit {
     for(let i = 0; i<this.clusters.length; i++){
       this.removeCenters(i);
     }
-    this.mapService.analizeSimple(this.clusters)
+    //this.mapService.analizeSimple(this.clusters)
   }
 
 
   removeCenters(numCluster: number){
     let destinations = this.clusters[numCluster].destinations;
+    this.closeResult()
     for(let i =0; i<destinations.length; i++){
       if(destinations[i].center){
         this.removeMarker(numCluster, i)
         this.clusters[numCluster].destinations.splice(i,1)
         this.clusters[numCluster].destinations.forEach((d,i)=>{if(!d.nameTouched){d.id=(i).toString()}})
+        this.removeCenters(numCluster)
       }
     }
   }
 
   trackByFn(i: number) {
     return i
+  }
+
+  closeResult(){
+    this.showResults = false;
   }
 
 }

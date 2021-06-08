@@ -3,7 +3,7 @@
   <p class="text-secondary text-center align-self-center" style="font-size: x-large; width: 95%; margin: auto">Clusters
     <button type="button"  (click)="onAddCluster()"  class="btn btn-success align-self-center" style="padding:  3px 9px 3px 9px;"><i class="bi bi-plus-lg"></i>
     </button></p>
-  <div style="overflow-y: auto; overflow-x: hidden; height: 70vh" class="mt-2 border-top">
+  <div style="overflow-y: auto; overflow-x: hidden; height: 60vh" class="mt-2 border-top">
     <div *ngFor="let cluster of clusters ; index as j">
       <div class="row mt-2">
         <div class="col-12 pl-4 pr-4">
@@ -24,17 +24,21 @@
               <div class="row">
                 <div class="col-11">
                   <div class="row text-center">
-                    <div class="col-3 pl-1 pr-1 ">
+                    <div class="col-4 pl-1 pr-1 ">
                       <p class="mb-0 pb-0 text-muted">Nombre</p>
                     </div>
-                    <div class="col-3 pl-1 pr-1">
-                      <p class="mb-0 pb-0 text-muted">Volumen</p>
-                    </div>
-                    <div class="col-3 pl-1 pr-1 ">
-                      <p class="mb-0 pb-0 text-muted">Latitud</p>
-                    </div>
-                    <div class="col-3 pl-1 pr-1">
-                      <p class="mb-0 pb-0 text-muted">Longitud</p>
+                    <div class="col-8">
+                      <div class="row text-center">
+                        <div class="col-4 pl-1 pr-1">
+                          <p class="mb-0 pb-0 text-muted">Peso</p>
+                        </div>
+                        <div class="col-4 pl-1 pr-1 ">
+                          <p class="mb-0 pb-0 text-muted">Latitud</p>
+                        </div>
+                        <div class="col-4 pl-1 pr-1">
+                          <p class="mb-0 pb-0 text-muted">Longitud</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -44,27 +48,31 @@
               <div class="row">
                 <div class="col-11">
                   <div class="row">
-                    <div class="col-3 pl-1 pr-1 ">
+                    <div class="col-4 pl-1 pr-1 ">
                       <input required type="text" id="{{'Id'+i+j}}" name="{{'Id'+i+j}}" class="form-control"
                              placeholder="{{'Nombre'}}" [(ngModel)]="destination.id" #id="ngModel" (ngModelChange)="updateMarkerTag(j,i)"
                              [class.is-invalid]="id.invalid && (id.dirty || id.touched)" disabled>
                     </div>
-                    <div class="col-3 pl-1 pr-1">
-                      <input required pattern="[0-9]*" type="text" id="{{'Volume'+i+j}}" name="{{'Volume'+i+j}}" class="form-control"
-                             placeholder="{{'Volumen'}}" min="0" (change)="removeCenters(j)"  [(ngModel)]="destination.volume" #volume="ngModel"  [disabled]="destination.center"
-                             [class.is-invalid]="volume.invalid && (volume.dirty || volume.touched)">
-                    </div>
-                    <div class="col-3 pl-1 pr-1 ">
-                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lat'+i+j}}" name="{{'lat'+i+j}}" class="form-control"
-                             placeholder="{{'Lat'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.lat" #lat="ngModel"
-                             min="-90" max="90" step="any" [disabled]="destination.center"
-                             [class.is-invalid]="(lat.invalid && (lat.dirty || lat.touched))">
-                    </div>
-                    <div class="col-3 pl-1 pr-1">
-                      <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lon'+i+j}}" name="{{'lon'+i+j}}" class="form-control"
-                             placeholder="{{'Long'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.long" #lon="ngModel"
-                             min="-180" max="180" step="any" [disabled]="destination.center"
-                             [class.is-invalid]="(lon.invalid && (lon.dirty || lon.touched))">
+                    <div class="col-8">
+                      <div class="row">
+                        <div class="col-4 pl-1 pr-1">
+                          <input required pattern="[0-9]*" type="text" id="{{'Volume'+i+j}}" name="{{'Volume'+i+j}}" class="form-control"
+                                 placeholder="{{'Peso'}}" min="0" (change)="removeCenters(j)"  [(ngModel)]="destination.volume" #volume="ngModel"  [disabled]="destination.center"
+                                 [class.is-invalid]="volume.invalid && (volume.dirty || volume.touched)">
+                        </div>
+                        <div class="col-4 pl-1 pr-1 ">
+                          <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lat'+i+j}}" name="{{'lat'+i+j}}" class="form-control"
+                                 placeholder="{{'Lat'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.lat" #lat="ngModel"
+                                 min="-90" max="90" step="any" [disabled]="destination.center"
+                                 [class.is-invalid]="(lat.invalid && (lat.dirty || lat.touched))">
+                        </div>
+                        <div class="col-4 pl-1 pr-1">
+                          <input required pattern="^(?=.)([+-]?([0-9]*)(\.([0-9]+))?)$" type="number" id="{{'lon'+i+j}}" name="{{'lon'+i+j}}" class="form-control"
+                                 placeholder="{{'Long'}}" (change)="updateMarkerPos(j,i)" [(ngModel)]="destination.long" #lon="ngModel"
+                                 min="-180" max="180" step="any" [disabled]="destination.center"
+                                 [class.is-invalid]="(lon.invalid && (lon.dirty || lon.touched))">
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -85,23 +93,25 @@
       </div>
     </div>
   </div>
+
 </div>
-  <div class="row" style="margin-top: 3vh">
+  <div class="row text-center" style="margin: auto; margin-top: 2vh; width: 70%">
+    <ng-template [ngIf]="showResults">
+      <div class="alert alert-success alert-dismissible fade show mt-2" style="padding-bottom: 20px; margin-bottom: -5px">
+        <button type="button" class="close" (click)="closeResult()">&times;</button>
+          Hubo una mejora del <strong>{{improvement.toFixed(2)}}%</strong> en el consumo de combustible.
+      </div>
+    </ng-template>
+  </div>
+  <div class="row" style="margin-top: 2vh">
     <div class="col-2 pl-1 pr-1">
     </div>
 
-    <div class="col-4 pl-1 pr-2">
+    <div class="col-8 pt-2 pl-1 pr-2">
       <div class="text-center">
-        <button [disabled]="!form.checkValidity()" (click)="analize()" style="font-size: large;" class="btn btn-primary">Calcular Logística Nueva <i class="bi bi-truck"></i>
+        <button [disabled]="!form.checkValidity()" (click)="analize()" style="font-size: large;" class="btn btn-primary">Calcular Logística <i class="bi bi-truck"></i>
         </button>
       </div>
-    </div>
-    <div class="col-4 pl-2 pr-1">
-      <div class="text-center">
-        <button [disabled]="!form.checkValidity()" (click)="analizeSimple()" style="font-size: large;" class="btn btn-secondary">Calcular Logística Antigua <i class="bi bi-truck"></i>
-        </button>
-      </div>
-
     </div>
     <div class="col-2 pl-1 pr-1">
     </div>
