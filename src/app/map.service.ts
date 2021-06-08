@@ -378,12 +378,6 @@ export class MapService {
           ws_data.push(da)
         })
         ws_data.push([]);
-        ws_data.push(['Pesos']);
-        ws_data.push(c.destinations.map(d=>d.id));
-        result.allWeigths[i].forEach(wa=>{
-          ws_data.push(wa)
-        })
-        ws_data.push([]);
         ws_data.push(['Nombre' , 'Volumen', 'Latitud', 'Longitud']);
         // @ts-ignore
         c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
