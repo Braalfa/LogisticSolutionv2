@@ -165,13 +165,13 @@ export class MapService {
   }
 
 
-  minRoute(dics: Dic[], names: string[]):Route{
+  minRoute(dics: Dic[], names: string[], totalVolume: number):Route{
     let currentWeight = Number.MAX_SAFE_INTEGER
     let currentRoute = new Route();
     for (let i = 0; i < names.length; i++) {
       const nextNames = names.slice();
       nextNames.splice(i, 1);
-      const tempRoute = this.minRouteAux(dics, names[i], nextNames);
+      const tempRoute = this.minRouteAux(dics, names[i], totalVolume, 0, nextNames);
       if (tempRoute.weight < currentWeight) {
         currentWeight = tempRoute.weight;
         currentRoute = tempRoute;
@@ -179,20 +179,22 @@ export class MapService {
     }
     return currentRoute;
   }
-  minRouteAux(dics: Dic[], current: string, remaining: string[]): Route{
+  minRouteAux(dics: Dic[], current: string, totalLitros: number,acumulado: number, remaining: string[]): Route{
     let currentRoute = new Route();
     if(remaining.length>0) {
       let currentWeight = Number.MAX_SAFE_INTEGER
+      let acumuladoAux = 0;
       for (let i = 0; i < remaining.length; i++) {
         const nextRemaining = remaining.slice();
         nextRemaining.splice(i, 1);
-        const tempRoute = this.minRouteAux(dics, remaining[i], nextRemaining);
-        tempRoute.path.unshift(current)
-
         let next = remaining[i];
         let dic = dics.find((d:any) => d.origin===current && d.destination === next)
+        // @ts-ignore
+        acumuladoAux = dic.originVolume;
+        const tempRoute = this.minRouteAux(dics, remaining[i], totalLitros, acumulado + acumuladoAux, nextRemaining);
+        tempRoute.path.unshift(current)
         if(dic){
-          tempRoute.weight+= dic.weight;
+          tempRoute.weight+= dic.dist*(0.301+((totalLitros - acumulado - acumuladoAux)*0.301*0.01/45.0));
         }
         if (tempRoute.weight < currentWeight) {
           currentWeight = tempRoute.weight;
@@ -268,9 +270,11 @@ export class MapService {
     var allDistributionCenters: { lat: number; long: number; }[] = [];
     this.calcularDistancias(clusters).then(result=>{
       let minRoutes: Route[] = []
+
       // Calcular las rutas
       for(let i = 0; i< result.allDics.length; i++){
-        minRoutes.push(this.minRoute(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[]))
+        let totalVolume = clusters[i].destinations.map(d=>d.volume).reduce((a, b) => a + b, 0);
+        minRoutes.push(this.minRoute(result.allDics[i], clusters[i].destinations.map(d=>d.id) as string[], totalVolume))
       }
       console.log(result.allDics)
 
@@ -293,6 +297,7 @@ export class MapService {
             litros += dic.dist*(0.301+((totalLitros-acumulado)*0.301*0.01/45))
           }
         }
+        console.log(litros)
         listLitros.push(litros)
       }
 
@@ -431,7 +436,7 @@ export class MapService {
         let cluster = clusters[i].destinations
         let totalLitros = 0;
         for(let j = 0; j< cluster.length; j++){
-          totalLitros = cluster[j].volume;
+          totalLitros += cluster[j].volume;
         }
         let acumulado = 0;
         let litros = 0;
