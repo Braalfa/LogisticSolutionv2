@@ -512,10 +512,6 @@ export class MapService {
         console.log(route.path)
         console.log(route.weight)
         let midpoints = []
-        let distributionCenter = {
-          lat: 0,
-          long: 0
-        }
         // Calculo intracluster
         for(let j = 0; j<route.path.length-1; j++) {
           let dic = dics.find((d: any) => d.origin === route.path[j] && d.destination === route.path[j + 1])
@@ -528,23 +524,11 @@ export class MapService {
               weight: (dic.originVolume + dic.destinationVolume) / 2,
               distributionDistance: dic.dist
             })
-            distributionCenter.lat += (dic.originLat + dic.destinationLat) / 2;
-            distributionCenter.long += (dic.originLong + dic.destinationLong) / 2;
           }
         }
-        distributionCenter.lat = distributionCenter.lat/(route.path.length-1)
-        distributionCenter.long = distributionCenter.long/(route.path.length-1)
         allMidPoints.push(midpoints);
 
-        clusters[i].destinations.slice(0,-1).forEach(d=>
-        {
-          if(d.long && d.lat) {
-            let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-              [d.long, d.lat]]);
-            d.distanceCenter = length(line, {units: 'kilometers'});
-          }
-        })
-
+        let distributionCenter = allDistributionCenters[i]
         let marker = this.addCenterMarker("Centro "+(i+1)+" - Método Anterior", clusters[i].color)
         marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
         marker.setDraggable(false)
