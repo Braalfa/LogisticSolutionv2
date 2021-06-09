@@ -445,47 +445,6 @@ export class MapService {
     let listLitros: any[] = [];
     var allDistributionCenters: { lat: number; long: number; }[] = [];
 
-    // Calcular los centros cluster por cluster
-    for(let i = 0; i<clusters.length; i++){
-      let distributionCenter = {
-        lat: 0,
-        long: 0
-      }
-      // Calculo intracluster
-      for(let j = 0; j<clusters[i].destinations.slice(0,-1).length; j++) {
-        let destination = clusters[i].destinations.slice(0,-1)[j];
-        if (destination.lat && destination.long) {
-          distributionCenter.lat += destination.lat;
-          distributionCenter.long += destination.long;
-        }
-      }
-      distributionCenter.lat = distributionCenter.lat/(clusters[i].destinations.slice(0,-1).length)
-      distributionCenter.long = distributionCenter.long/(clusters[i].destinations.slice(0,-1).length)
-      allDistributionCenters.push(distributionCenter);
-
-      clusters[i].destinations.slice(0,-1).forEach(d=>
-      {
-        if(d.long && d.lat) {
-          let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
-            [d.long, d.lat]]);
-          d.distanceCenter = length(line, {units: 'kilometers'});
-        }
-      })
-
-      let marker = this.addCenterMarker("Centro "+(i+1)+" - Método Anterior", clusters[i].color)
-      marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
-      marker.setDraggable(false)
-      let destination = new Destination();
-      destination.id = "Centro Anterior";
-      destination.marker = marker;
-      destination.nameTouched = true;
-      destination.long = distributionCenter.long;
-      destination.lat = distributionCenter.lat;
-      destination.center = true;
-      destination.volume = 0;
-      clusters[i].destinations.push(destination)
-    }
-
     await this.calcularDistancias(clusters, true).then(async result=>{
       let minRoutes: Route[] = []
       // Calcular las rutas
@@ -498,6 +457,35 @@ export class MapService {
         let route = minRoutes[i]
         let dics = result.allDics[i]
         let cluster = clusters[i].destinations.slice(0,-1)
+
+
+        let distributionCenter = {
+          lat: 0,
+          long: 0
+        }
+        // Calculo intracluster
+        for(let j = 0; j<clusters[i].destinations.slice(0,-1).length; j++) {
+          let destination = clusters[i].destinations.slice(0,-1)[j];
+          if (destination.lat && destination.long) {
+            distributionCenter.lat += destination.lat;
+            distributionCenter.long += destination.long;
+          }
+        }
+        distributionCenter.lat = distributionCenter.lat/(clusters[i].destinations.slice(0,-1).length)
+        distributionCenter.long = distributionCenter.long/(clusters[i].destinations.slice(0,-1).length)
+        allDistributionCenters.push(distributionCenter);
+
+        clusters[i].destinations.slice(0,-1).forEach(d=>
+        {
+          if(d.long && d.lat) {
+            let line = turf.lineString([[distributionCenter.long, distributionCenter.lat],
+              [d.long, d.lat]]);
+            d.distanceCenter = length(line, {units: 'kilometers'});
+          }
+        })
+
+
+
         let totalLitros = 0;
         for(let j = 0; j< cluster.length; j++){
           totalLitros += cluster[j].volume;
@@ -556,6 +544,21 @@ export class MapService {
             d.distanceCenter = length(line, {units: 'kilometers'});
           }
         })
+
+        let marker = this.addCenterMarker("Centro "+(i+1)+" - Método Anterior", clusters[i].color)
+        marker.setLngLat(new LngLat(distributionCenter.long, distributionCenter.lat))
+        marker.setDraggable(false)
+        let destination = new Destination();
+        destination.id = "Centro Anterior";
+        destination.marker = marker;
+        destination.nameTouched = true;
+        destination.long = distributionCenter.long;
+        destination.lat = distributionCenter.lat;
+        destination.center = true;
+        destination.volume = 0;
+        clusters[i].destinations.push(destination)
+
+
       }
 
 
@@ -581,7 +584,7 @@ export class MapService {
         ws_data.push([]);
         ws_data.push(['Nombre' , 'Peso', 'Latitud', 'Longitud']);
         // @ts-ignore
-        c.destinations.forEach(d=>ws_data.push([d.id, d.volume, d.lat, d.long]));
+        c.destinations.forEach((d,i)=>{if(i!=c.destinations.length-2){ws_data.push([d.id, d.volume, d.lat, d.long])}});
         ws_data.push([]);
         ws_data.push(['Puntos medios:']);
         ws_data.push(['Ruta', 'Latitud Prom', 'Longitud Prom', 'Distancia']);
